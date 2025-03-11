@@ -1,4 +1,4 @@
-#include "../include/chess.hpp"
+#include "./include/chess.hpp"
 #include "math.h"
 #include "map"
 using namespace chess;
