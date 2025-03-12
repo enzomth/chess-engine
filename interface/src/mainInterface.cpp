@@ -32,12 +32,15 @@ label:
 
                 std::cout << "Meilleur coup : " << uci::moveToUci(move) << std::endl;
 
+
                 //Récupération des coordonnées depuis le uci
                 int xSelect = 8 -(moveUci[1] - '0');
                 int ySelect = moveUci[0] - 'a';
 
                 int xTarget = 8 - (moveUci[3] - '0');
                 int yTarget = moveUci[2] - 'a';
+
+                std::cout << xSelect << ySelect << "to" <<xTarget<< yTarget<< std::endl;
 
                 //Déplcemengt de la pièce
                 chess.SelectPiece(chess.cells, xSelect,ySelect);
