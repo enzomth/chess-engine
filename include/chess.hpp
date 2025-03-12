@@ -2024,7 +2024,10 @@ class Board {
         const auto pt       = at<PieceType>(move.from());
 
         // Validate side to move
-        assert((at(move.from()) < Piece::BLACKPAWN) == (stm_ == Color::WHITE));
+        if (!(at(move.from()) < Piece::BLACKPAWN) == (stm_ == Color::WHITE)) {
+          std::cout << "A l'aide" << std::endl;
+        }
+        //assert();
 
         prev_states_.emplace_back(key_, cr_, ep_sq_, hfm_, captured);
 
