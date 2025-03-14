@@ -40,14 +40,15 @@ label:
                 int xTarget = 8 - (moveUci[3] - '0');
                 int yTarget = moveUci[2] - 'a';
 
-                std::cout << xSelect << ySelect << "to" <<xTarget<< yTarget<< std::endl;
+                std::cout << "Normalement " << xSelect << ySelect << "to" <<xTarget<< yTarget<< std::endl;
 
-                //Déplcemengt de la pièce
+                //Déplacemengt de la pièce
                 chess.SelectPiece(chess.cells, xSelect,ySelect);
                 chess.moveSelected(chess.cells, xTarget, yTarget);
 
                 //Mise a jour du plateau
                 board.makeMove(move);
+
 
                 // if (e.mouseButton.button == sf::Mouse::Left)
                 //  {
@@ -61,13 +62,11 @@ label:
                 //          {
                 //              //chess.SelectPiece(chess.cells, 1,1);
                 //              chess.SelectPiece(chess.cells, x, y);
-                //              std::cout << x << "   " << y << std::endl;
                 //          }
                 //          else
                 //          {
                 //              //chess.moveSelected(chess.cells,1,2);
                 //              chess.moveSelected(chess.cells, e.mouseButton.y / 100, e.mouseButton.x / 100);
-                //              std::cout << e.mouseButton.y / 100 << "   " << e.mouseButton.x / 100 << std::endl;
                 //          }
                 //      }
                 //      if (e.mouseButton.x >= 850 && e.mouseButton.x <= 1024 && e.mouseButton.y >= 5 && e.mouseButton.y <= 55)

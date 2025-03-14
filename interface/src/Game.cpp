@@ -391,6 +391,7 @@ void Game::moveSelected(Square Cells[][8], int x, int y)
     if (valid)
     {
         selected_piece->piece.setPosition(sf::Vector2f(100.f * y + 50.f, 100.f * x + 50.f));
+        std::cout << "vectored" << std::endl;
         int a = selected_piece->x, b = selected_piece->y;
         if (Cells[x][y].occupied_color != 0 && Cells[x][y].occupied_color != Cells[a][b].occupied_color)
         {
