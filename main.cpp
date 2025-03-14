@@ -3,7 +3,8 @@
 #include "map"
 
 using namespace chess;
-#define DEPTH 6
+#define DEPTH 5
+int nb_pos = 0;
 std::map<chess::PieceType, int> piece_values = {
     {chess::PieceType::PAWN, 10},
     {chess::PieceType::KNIGHT, 30},
@@ -25,7 +26,7 @@ std::unordered_map<int, ValueMap> hashTable;
 int nbPos = 0;
 
 int evaluate_move(const chess::Board &board, const chess::Move &move) {
-    nbPos++;
+    nb_pos ++;
     chess::Board newBoard = board;
     newBoard.makeMove(move);
     std::pair<chess::GameResultReason, chess::GameResult> result = newBoard.isGameOver();
@@ -42,13 +43,38 @@ int evaluate_move(const chess::Board &board, const chess::Move &move) {
     return 0;
 }
 
-int evaluate(Board b) {
-    int res=0;
 
 
-    return 0;
+
+int evaluate(const chess::Board &board) {
+
+
+
+    std::pair<chess::GameResultReason, chess::GameResult> result = board.isGameOver();
+
+    if (result.first == chess::GameResultReason::CHECKMATE) {
+        return 10000;
+    }
+
+    int value = 0;
+    chess::Color white = chess::Color::WHITE;
+    chess::Color black = chess::Color::BLACK;
+
+
+
+    // Ajouter la valeur des pièces du joueur actif
+    for (auto pieceType : {chess::PieceType::PAWN, chess::PieceType::KNIGHT, chess::PieceType::BISHOP,
+                           chess::PieceType::ROOK, chess::PieceType::QUEEN, chess::PieceType::KING}) {
+        Bitboard whitePieces = board.pieces(pieceType, white);
+        Bitboard blackPieces = board.pieces(pieceType, black);
+
+
+            value += whitePieces.count() *piece_values[pieceType];
+            value -= blackPieces.count() *piece_values[pieceType];
+    }
+
+    return value;
 }
-
 
 int minmax(chess::Board board, int depth, bool isMaximizingPlayer){
     
