@@ -13,6 +13,15 @@ std::map<chess::PieceType, int> piece_values = {
     {chess::PieceType::KING, 1000}
 };
 
+struct ValueMap {
+    int value;
+    int exact;
+    int depth;
+    std::string uci_move;
+};
+
+std::unordered_map<int, ValueMap> hashTable;
+
 int nbPos = 0;
 
 int evaluate_move(const chess::Board &board, const chess::Move &move) {
@@ -34,6 +43,9 @@ int evaluate_move(const chess::Board &board, const chess::Move &move) {
 }
 
 int evaluate(Board b) {
+    int res=0;
+
+
     return 0;
 }
 
@@ -75,6 +87,20 @@ int minmax(chess::Board board, int depth, bool isMaximizingPlayer){
 }
 
 int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int alpha, int beta) {
+
+    //Vérification dans la table de hashage
+    int hashBoard = board.hash();
+    auto calculated_board = hashTable.find(hashBoard);
+    bool already_stored = false;
+
+    if (calculated_board != hashTable.end()) {
+        already_stored = true;
+        ValueMap value_stored = calculated_board->second;
+        if (value_stored.depth > depth) {
+            return value_stored.value;
+        }
+    }
+
     if (depth == 0) {
         return evaluate(board);  //on s'arrete ici
     }
