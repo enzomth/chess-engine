@@ -4,6 +4,7 @@
 
 using namespace chess;
 #define DEPTH 5
+int nb_pos = 0;
 std::map<chess::PieceType, int> piece_values = {
     {chess::PieceType::PAWN, 10},
     {chess::PieceType::KNIGHT, 30},
@@ -14,6 +15,7 @@ std::map<chess::PieceType, int> piece_values = {
 };
 
 int evaluate_move(const chess::Board &board, const chess::Move &move) {
+    nb_pos ++;
     chess::Board newBoard = board;
     newBoard.makeMove(move);
     std::pair<chess::GameResultReason, chess::GameResult> result = newBoard.isGameOver();
@@ -30,6 +32,36 @@ int evaluate_move(const chess::Board &board, const chess::Move &move) {
     return 0;
 }
 
+
+int evaluate(const chess::Board &board) {
+    
+    
+    
+    std::pair<chess::GameResultReason, chess::GameResult> result = board.isGameOver();
+
+    if (result.first == chess::GameResultReason::CHECKMATE) {
+        return 10000;
+    }
+
+    int value = 0;
+    chess::Color white = chess::Color::WHITE;
+    chess::Color black = chess::Color::BLACK;
+
+
+
+    // Ajouter la valeur des pièces du joueur actif
+    for (auto pieceType : {chess::PieceType::PAWN, chess::PieceType::KNIGHT, chess::PieceType::BISHOP, 
+                           chess::PieceType::ROOK, chess::PieceType::QUEEN, chess::PieceType::KING}) {
+        Bitboard whitePieces = board.pieces(pieceType, white);
+        Bitboard blackPieces = board.pieces(pieceType, black);
+        
+        
+            value += whitePieces.count() *piece_values[pieceType];
+            value -= blackPieces.count() *piece_values[pieceType];
+    }
+
+    return value;
+}
 
 int minmax(chess::Board board, int depth, bool isMaximizingPlayer){
     
@@ -97,14 +129,16 @@ chess::Move best_move(chess::Board &board, int depth) {
 }
 
 int main () {
-    Board board = Board("k7/1R6/8/8/7R/8/8/K7 w - - 0 1");
+    Board board = Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
-    for(int i=0; i<20; i++){
+    for(int i=0; i<5; i++){
     chess::Move move = best_move(board,DEPTH);
     std::cout << "Meilleur coup : " << uci::moveToUci(move) << std::endl;
 
     board.makeMove(move);
 }
+std::cout << "nb positions  : " << nb_pos << std::endl;
+
 std::cout << "FEN  : " << board.getFen() << std::endl;
 
     return 0;
