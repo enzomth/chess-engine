@@ -1,38 +1,20 @@
 #include "./include/chess.hpp"
+#include "piece_square.hpp"
 #include "math.h"
 #include "map"
 
 using namespace chess;
-#define DEPTH 5
+#define DEPTH 1
+#define PST_SIZE 8
 int nb_pos = 0;
-std::map<chess::PieceType, int> piece_values = {
-    {chess::PieceType::PAWN, 10},
-    {chess::PieceType::KNIGHT, 30},
-    {chess::PieceType::BISHOP, 30},
-    {chess::PieceType::ROOK, 50},
-    {chess::PieceType::QUEEN, 90},
-    {chess::PieceType::KING, 1000}
+std::map<chess::PieceType,int, int> piece_values = {
+    {chess::PieceType::PAWN, 136,208},
+    {chess::PieceType::KNIGHT,781,854},
+    {chess::PieceType::BISHOP, 825,915},
+    {chess::PieceType::ROOK, 1276,1380},
+    {chess::PieceType::QUEEN, 2538,2682}
 };
 
-int nbPos = 0;
-
-int evaluate_move(const chess::Board &board, const chess::Move &move) {
-    nb_pos ++;
-    chess::Board newBoard = board;
-    newBoard.makeMove(move);
-    std::pair<chess::GameResultReason, chess::GameResult> result = newBoard.isGameOver();
-
-    if (result.first == chess::GameResultReason::CHECKMATE) {
-        return 10000;
-    }
-
-    if (board.isCapture(move)) {
-        chess::Piece captured_piece = board.at(move.to());
-        int value = piece_values[captured_piece.type()];
-        return value;
-    }
-    return 0;
-}
 
 
 
@@ -40,7 +22,8 @@ int evaluate_move(const chess::Board &board, const chess::Move &move) {
 int evaluate(const chess::Board &board) {
     
     
-    
+    int row;
+    int col;
     std::pair<chess::GameResultReason, chess::GameResult> result = board.isGameOver();
 
     if (result.first == chess::GameResultReason::CHECKMATE) {
@@ -59,6 +42,21 @@ int evaluate(const chess::Board &board) {
         Bitboard whitePieces = board.pieces(pieceType, white);
         Bitboard blackPieces = board.pieces(pieceType, black);
         
+        for (int i = 0; i < 64; ++i) {
+            if (whitePieces & (1ULL << i)) {
+                row = i / PST_SIZE;  // L'index de la ligne est l'index de bit divisé par la taille de l'échiquier
+                col = i % PST_SIZE;
+                value += get_placement_value(,row,col,pieceType,);
+
+            }
+        for (int i = 0; i < 64; ++i) {
+            if (whitePieces & (1ULL << i)) {
+                    row = 7 - (i / PST_SIZE);  // L'index de la ligne est l'index de bit divisé par la taille de l'échiquier
+                    col = (i % PST_SIZE);
+                    value += get_placement_value(row,col,pieceType);
+    
+            }
+
         
             value += whitePieces.count() *piece_values[pieceType];
             value -= blackPieces.count() *piece_values[pieceType];
@@ -66,42 +64,9 @@ int evaluate(const chess::Board &board) {
 
     return value;
 }
+}}
 
-int minmax(chess::Board board, int depth, bool isMaximizingPlayer){
-    
-    if (depth == 0) {
-        return 0;  //on s'arrete ici
-    }
-    
-    Movelist moves;
-    movegen::legalmoves(moves, board);
-    if (moves.empty()) {
-        return 0;  // Pas de coups possibles
-    }
 
-    if (isMaximizingPlayer) {
-        int maxEval = -100000;
-        for (const auto &move : moves) {
-            chess::Board newBoard = board;
-            newBoard.makeMove(move);  // Joue le coup
-            int eval =  (evaluate_move(board, move) + minmax(newBoard, depth - 1, false))-depth;
-            maxEval = std::max(maxEval, eval);
-        }
-        return maxEval;
-    }
-    
-    else {
-        int minEval = 100000;
-        for (const auto &move : moves) {
-            chess::Board newBoard = board;
-            newBoard.makeMove(move);  // Joue le coup
-            int eval =  - evaluate_move(board, move) + minmax(newBoard, depth - 1, true);
-            minEval = std::min(minEval, eval);
-        }
-        return minEval;
-    }
-
-}
 
 int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int alpha, int beta) {
     if (depth == 0) {
@@ -145,6 +110,7 @@ int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int a
     }
 }
 
+
 chess::Move best_move(chess::Board &board, int depth) {
     Movelist moves;
     movegen::legalmoves(moves, board);
@@ -162,7 +128,7 @@ chess::Move best_move(chess::Board &board, int depth) {
         chess::Board newBoard = board;
         newBoard.makeMove(move);
         
-        int eval = evaluate_move(board,move) + minmaxAlphaBeta(newBoard, depth - 1, false,std::numeric_limits<int>::min(),std::numeric_limits<int>::max()); // Appel MinMax pour évaluer ce coup
+        int eval = minmaxAlphaBeta(newBoard, depth - 1, false,std::numeric_limits<int>::min(),std::numeric_limits<int>::max()); // Appel MinMax pour évaluer ce coup
         std::cout << eval<< " : " << uci::moveToUci(move) <<std::endl;
 
         if (eval > best_eval) {
@@ -185,7 +151,7 @@ int main () {
         board.makeMove(move);
     }
 
-    std::cout << "nb pos : "<<nbPos << std::endl;
+
     std::cout << "FEN  : " << board.getFen() << std::endl;
 
     return 0;
