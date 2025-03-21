@@ -2,20 +2,16 @@
 #include <chrono>
 
 #include "./include/chess.hpp"
+#include "piece_square.hpp"
 #include "math.h"
 #include "map"
 
 using namespace chess;
 #define DEPTH 4
+
+
 int nb_pos = 0;
-std::map<chess::PieceType, int> piece_values = {
-    {chess::PieceType::PAWN, 10},
-    {chess::PieceType::KNIGHT, 30},
-    {chess::PieceType::BISHOP, 30},
-    {chess::PieceType::ROOK, 50},
-    {chess::PieceType::QUEEN, 90},
-    {chess::PieceType::KING, 1000}
-};
+
 
 struct ValueMap {
     int value;
@@ -35,26 +31,13 @@ int evaluate(const chess::Board &board) {
     if (result.first == chess::GameResultReason::CHECKMATE) {
         return 10000;
     }
-
-    int value = 0;
-    chess::Color white = chess::Color::WHITE;
-    chess::Color black = chess::Color::BLACK;
-
-
-
-    // Ajouter la valeur des pièces du joueur actif
-    for (auto pieceType : {chess::PieceType::PAWN, chess::PieceType::KNIGHT, chess::PieceType::BISHOP,
-                           chess::PieceType::ROOK, chess::PieceType::QUEEN, chess::PieceType::KING}) {
-        Bitboard whitePieces = board.pieces(pieceType, white);
-        Bitboard blackPieces = board.pieces(pieceType, black);
-
-
-            value += whitePieces.count() *piece_values[pieceType];
-            value -= blackPieces.count() *piece_values[pieceType];
+    else{
+        return eval(board);
     }
 
-    return value;
+    
 }
+
 
 
 int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int alpha, int beta) {
@@ -278,7 +261,7 @@ chess::Move best_move(chess::Board &board, int depth) {
 
 int main () {
     //Board board = Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq – 0 1");
-    Board board = Board("8/P3n1kp/5p2/4p3/4P2p/6P1/Q4PKP/3q4 w - - 0 1");
+    Board board = Board("8/P1Q1nk1p/5p2/4p3/4P2p/6P1/r4PKP/3q4 w - - 0 1");
 
     for(int i=0; i<1; i++){
         chess::Move move = best_move_iterative_deepening(board,5000);
