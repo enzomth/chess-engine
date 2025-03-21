@@ -275,5 +275,6 @@ int main () {
     std::cout << "nb pos : "<< nb_pos << std::endl;
     std::cout << "FEN  : " << board.getFen() << std::endl;
 
+
     return 0;
 }
