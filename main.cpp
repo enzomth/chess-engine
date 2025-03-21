@@ -2,52 +2,107 @@
 #include <chrono>
 
 #include "./include/chess.hpp"
-#include "piece_square.hpp"
 #include "math.h"
 #include "map"
 
 using namespace chess;
-#define DEPTH 5
-
-
+#define DEPTH 4
 int nb_pos = 0;
-
+int test1 = 0;
+int test2 = 0;
+std::map<chess::PieceType, int> piece_values = {
+    {chess::PieceType::PAWN, 10},
+    {chess::PieceType::KNIGHT, 30},
+    {chess::PieceType::BISHOP, 30},
+    {chess::PieceType::ROOK, 50},
+    {chess::PieceType::QUEEN, 90},
+    {chess::PieceType::KING, 1000}
+};
 
 struct ValueMap {
     int value;
     int exact;
     int depth;
     std::string uci_move;
+    std::string killer_move;
 };
 
 std::unordered_map<int, ValueMap> hashTable;
 
+int currentMaxDepth = 1;
+
 int evaluate(const chess::Board &board) {
-    
-    
-    
+
+    nb_pos ++;
+
     std::pair<chess::GameResultReason, chess::GameResult> result = board.isGameOver();
 
     if (result.first == chess::GameResultReason::CHECKMATE) {
         return 10000;
     }
-    else{
-        return eval(board);
+
+    int value = 0;
+    chess::Color white = chess::Color::WHITE;
+    chess::Color black = chess::Color::BLACK;
+
+
+
+    // Ajouter la valeur des pièces du joueur actif
+    for (auto pieceType : {chess::PieceType::PAWN, chess::PieceType::KNIGHT, chess::PieceType::BISHOP,
+                           chess::PieceType::ROOK, chess::PieceType::QUEEN, chess::PieceType::KING}) {
+        Bitboard whitePieces = board.pieces(pieceType, white);
+        Bitboard blackPieces = board.pieces(pieceType, black);
+
+
+            value += whitePieces.count() *piece_values[pieceType];
+            value -= blackPieces.count() *piece_values[pieceType];
     }
 
-    
+    return value;
+}
+
+chess::Movelist sortMove(chess::Movelist& movelist,chess::Move bestMove,chess::Move killerMove1,chess::Move killerMove2) {
+    chess::Movelist tmp;
+    chess::Movelist movesSorted;
+
+    chess::Move b = NULL;
+    chess::Move k1 = NULL;
+    chess::Move k2 = NULL;
+
+    for (const auto &move : movelist) {
+        if (move == bestMove){b=move;}
+        else if (move == killerMove1){k1=move;}
+        else if (move == killerMove2){k2=move;}
+        else {
+            tmp.add(move);
+        }
+    }
+
+    if (b != NULL){movesSorted.add(b);}
+    else if (k2 != NULL){movesSorted.add(k2);test2++;}
+    else if (k1 != NULL){movesSorted.add(k1);test1++;}
+
+
+    for (const auto &move : tmp) {
+        movesSorted.add(move);
+    }
+
+    return movesSorted;
 }
 
 
+int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int alpha, int beta,chess::Move killers1[],chess::Move killers2[]) {
 
-int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int alpha, int beta) {
 
     //Vérification dans la table de hashage
     int hashBoard = board.hash();
     auto calculated_board = hashTable.find(hashBoard);
+    ValueMap value_stored;
+
+    int killerDepth = board.plies_;
 
     if (calculated_board != hashTable.end()) {
-        ValueMap value_stored = calculated_board->second;
+        value_stored = calculated_board->second;
         if (value_stored.depth > depth) {
             if (value_stored.exact == 0) {
                 return value_stored.value;
@@ -85,29 +140,10 @@ int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int a
     }
 
 
-    //Tri le tableau des moves (marche super bien mais a optimiser si possible)
-    std::stable_sort(moves.begin(),moves.end(),[board](chess::Move a,chess::Move b) -> bool {
 
-        chess::Board board_a = board;
-        chess::Board board_b = board;
-
-        board_a.makeMove(a);
-        board_b.makeMove(b);
-
-        int hash_board_a = board_a.hash();
-        int hash_board_b = board_b.hash();
-
-        auto calculated_board_a = hashTable.find(hash_board_a);
-        auto calculated_board_b = hashTable.find(hash_board_b);
-
-        if (calculated_board_a != hashTable.end() && calculated_board_b != hashTable.end()) {
-            return calculated_board_a->second.value < calculated_board_b->second.value;
-        }
-
-        return true;
-    });
-
-
+    if (calculated_board != hashTable.end()) {
+        moves = sortMove(moves,uci::uciToMove(board,value_stored.uci_move) ,killers1[killerDepth],killers2[killerDepth]);
+    }
 
 
     if (isMaximizingPlayer) {
@@ -118,7 +154,7 @@ int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int a
         for (const auto &move : moves) {
             chess::Board newBoard = board;
             newBoard.makeMove(move);  // Joue le coup
-            int eval = minmaxAlphaBeta(newBoard, depth - 1, false, alpha, beta)-depth;
+            int eval = minmaxAlphaBeta(newBoard, depth - 1, false, alpha, beta,killers1,killers2)-depth;
 
             //max
             if (eval > maxEval) {
@@ -130,6 +166,10 @@ int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int a
             //Alpha beta pruning
             if (beta <= maxEval) {
                 type_exact = -1;
+
+                killers1[killerDepth] = killers2[killerDepth];
+                killers2[killerDepth] = move;
+
                 break;
             }
             if (alpha < maxEval) {
@@ -137,11 +177,15 @@ int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int a
                 alpha = maxEval;
             }
 
+            killers1[killerDepth] = killers2[killerDepth];
+            killers2[killerDepth] = move;
+
         }
 
         value_to_store.exact = type_exact;
         value_to_store.value = maxEval;
         value_to_store.uci_move = uci_to_store;
+
         hashTable[hashBoard] = value_to_store;
         return maxEval;
     }
@@ -154,7 +198,7 @@ int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int a
         for (const auto &move : moves) {
             chess::Board newBoard = board;
             newBoard.makeMove(move);  // Joue le coup
-            int eval = minmaxAlphaBeta(newBoard, depth - 1, true,alpha,beta);
+            int eval = minmaxAlphaBeta(newBoard, depth - 1, true,alpha,beta,killers1,killers2);
 
             //min
             if (eval < minEval) {
@@ -165,6 +209,10 @@ int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int a
             //Alpha beta pruning
             if (minEval <= alpha) {
                 type_exact = 1;
+
+                killers1[killerDepth] = killers2[killerDepth];
+                killers2[killerDepth] = move;
+
                 break;
             }
             if (minEval < beta) {
@@ -172,12 +220,15 @@ int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int a
                 beta = minEval;
             }
 
+            killers1[killerDepth] = killers2[killerDepth];
+            killers2[killerDepth] = move;
         }
 
         value_to_store.exact = type_exact;
         value_to_store.value = minEval;
         value_to_store.uci_move = uci_to_store;
         hashTable[hashBoard] = value_to_store;
+
         return minEval;
     }
 }
@@ -195,6 +246,10 @@ chess::Move best_move_iterative_deepening(chess::Board board,int time) {
 
     //chrono pour arret
     auto start = std::chrono::high_resolution_clock::now();
+
+    //killer moves
+    chess::Move killers1[1000];
+    chess::Move killers2[1000];
 
     for (int depth = 1 ; depth <= std::numeric_limits<int>::max(); depth++ ) {
     //for (int depth = 1 ; depth <= 6; depth++ ) {
@@ -215,7 +270,8 @@ chess::Move best_move_iterative_deepening(chess::Board board,int time) {
             chess::Board newBoard = board;
             newBoard.makeMove(move);
 
-            int eval = minmaxAlphaBeta(newBoard,depth,false,std::numeric_limits<int>::min(),std::numeric_limits<int>::max());
+            currentMaxDepth = depth;
+            int eval = minmaxAlphaBeta(newBoard,depth,false,std::numeric_limits<int>::min(),std::numeric_limits<int>::max(),killers1,killers2);
 
             std::cout << eval<< " : " << uci::moveToUci(move) <<std::endl;
 
@@ -230,47 +286,18 @@ chess::Move best_move_iterative_deepening(chess::Board board,int time) {
     return bestMove;
 }
 
-chess::Move best_move(chess::Board &board, int depth) {
-    Movelist moves;
-    movegen::legalmoves(moves, board);
-    
-    if (moves.empty()) {
-        throw std::runtime_error("Aucun coup disponible !");
-    }
-
-    int best_eval = -100000; // Une valeur très basse au départ
-    chess::Move bestMove; // Initialisation avec un premier coup
-    //char test[]  = "b7h7";
-    //chess::Move move = uci::uciToMove(board,test);
-    for (const auto &move : moves) {
-        
-        chess::Board newBoard = board;
-        newBoard.makeMove(move);
-        
-        int eval = minmaxAlphaBeta(newBoard,depth,false,std::numeric_limits<int>::min(),std::numeric_limits<int>::max());
-        std::cout << eval<< " : " << uci::moveToUci(move) <<std::endl;
-
-        if (eval > best_eval) {
-            best_eval = eval;
-            bestMove = move; // Mise à jour du meilleur coup trouvé
-        }
-    }
-    
-    return bestMove; // Retourne le meilleur coup trouvé
-}
-
 int main () {
     //Board board = Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq – 0 1");
-    Board board = Board("8/P1Q1nk1p/5p2/4p3/4P2p/6P1/r4PKP/3q4 w - - 0 1");
+    Board board = Board("8/P3n1kp/5p2/4p3/4P2p/6P1/Q4PKP/3q4 w - - 0 1");
 
     for(int i=0; i<1; i++){
-        chess::Move move = best_move_iterative_deepening(board,15000);
+        chess::Move move = best_move_iterative_deepening(board,5000);
         std::cout << "Meilleur coup : " << uci::moveToUci(move) << std::endl;
 
         board.makeMove(move);
     }
 
-    std::cout << "nb pos : "<< nb_pos << std::endl;
+    std::cout << "nb pos : "<< nb_pos << " " << test1 << " "<< test2<< std::endl;
     std::cout << "FEN  : " << board.getFen() << std::endl;
 
 
