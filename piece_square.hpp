@@ -1,17 +1,27 @@
 #include <iostream>
-#include <chess.hpp>
+#include "./include/chess.hpp"
 
 #define RANK_NB 8
 #define FILE_NB 8
-struct BonusValue {
-    int opening;
-    int endgame;
-};
+#define MAX_PHASE 18812
+#define PST_SIZE 8
+
+
+
+
+int piece_values[] = {136,781,825,1276,2538};
+
+
 // Bonus[PieceType][Square / 2] contains Piece-Square scores. For each piece
 // type on a given square a (middlegame, endgame) score pair is assigned. Table
 // is defined for files A..D and white side: it is symmetric for black side and
 // second half of the files.
-BonusValue Bonus[][RANK_NB][int(FILE_NB) / 2] = {
+struct BonusValue {
+  int opening;
+  int endgame;
+};
+
+BonusValue Bonus[6][RANK_NB][FILE_NB / 2] = {
   {},
   { // Knight
    { (-175, -96), (-92,-65), (-74,-49), (-73,-21) },
@@ -76,7 +86,80 @@ BonusValue Bonus[][RANK_NB][int(FILE_NB) / 2] = {
    { ( -7,  0), (  7,-11), ( -3, 12), (-13, 21), (  5, 25), (-16, 19), ( 10,  4), ( -8,  7) }
   };
 
-int get_placement_value(chess::PieceType piece, int row, int col, int phase){
-    int eval = (int)(phase * middlegame_score + (max_phase - phase) * endgame_score) / max_phase
+int eval(chess::Board board){
+    int row, col, phase;
+    int partie = 0;
+    int middlegame_score = 0;
+    int endgame_score = 0;
 
+    chess::Color white = chess::Color::WHITE;
+    chess::Color black = chess::Color::BLACK;
+
+    // Ajouter la valeur des pièces du joueur actif
+    for (auto pieceType : {chess::PieceType::underlying::PAWN, chess::PieceType::underlying::KNIGHT, chess::PieceType::underlying::BISHOP,
+      chess::PieceType::underlying::ROOK, chess::PieceType::underlying::QUEEN, chess::PieceType::underlying::KING}) {
+
+
+        chess::Bitboard whitePieces = board.pieces(pieceType, white);
+        chess::Bitboard blackPieces = board.pieces(pieceType, black);
+
+        int pieceTypeIndex = static_cast<int>(pieceType);
+
+        if(pieceType == chess::PieceType::PAWN){
+          for (int i = 0; i < 64; ++i) {
+            if (whitePieces & (1ULL << i)) {
+                row = i / PST_SIZE;  // L'index de la ligne
+                col = i % PST_SIZE;  // L'index de la colonne
+                middlegame_score += Bonus[pieceTypeIndex][row][col].opening;  // Ajouter la valeur d'ouverture
+                endgame_score += Bonus[pieceTypeIndex][row][col].endgame;
+            }
+        }
+        for (int i = 0; i < 64; ++i) {
+          if (blackPieces & (1ULL << i)) {
+              row = 7 - (i / PST_SIZE);  // L'index de la ligne pour les pièces noires (symétrie)
+              col = i % PST_SIZE;
+              middlegame_score -= Bonus[pieceTypeIndex][row][col].opening;  // Ajouter la valeur d'ouverture
+              endgame_score -= Bonus[pieceTypeIndex][row][col].endgame;
+          }
+      }
+      }
+      else{
+
+        
+        // Pour les pièces blanches
+        for (int i = 0; i < 64; ++i) {
+            if (whitePieces & (1ULL << i)) {
+                row = i / PST_SIZE;  // L'index de la ligne
+                col = i % PST_SIZE;  // L'index de la colonne
+                middlegame_score += Bonus[pieceTypeIndex][row][col%4].opening;  // Ajouter la valeur d'ouverture
+                endgame_score += Bonus[pieceTypeIndex][row][col%4].endgame;
+            }
+        }
+
+        // Pour les pièces noires
+        for (int i = 0; i < 64; ++i) {
+            if (blackPieces & (1ULL << i)) {
+                row = 7 - (i / PST_SIZE);  // L'index de la ligne pour les pièces noires (symétrie)
+                col = i % PST_SIZE;
+                middlegame_score -= Bonus[pieceTypeIndex][row][col%4].opening;  // Ajouter la valeur d'ouverture
+                endgame_score -= Bonus[pieceTypeIndex][row][col%4].endgame;
+            }
+        }
+      }
+    
+
+        // Ajouter la valeur de la pièce elle-même (dépend de la phase du jeu)
+        phase += whitePieces.count() * piece_values[pieceTypeIndex]
+                 + blackPieces.count() * piece_values[pieceTypeIndex];
+        
+
+        partie += whitePieces.count() * piece_values[pieceTypeIndex]
+                 - blackPieces.count() * piece_values[pieceTypeIndex];
+    }
+
+    // Calcul de l'évaluation en fonction de la phase du jeu (calculer les scores d'ouverture et de fin de partie)
+
+    int eval = partie + (int)((phase * middlegame_score + (MAX_PHASE - phase) * endgame_score) / MAX_PHASE);
+
+    return eval;
 }
