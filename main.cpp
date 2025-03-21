@@ -266,7 +266,7 @@ int main () {
     Board board = Board("8/P1Q1nk1p/5p2/4p3/4P2p/6P1/r4PKP/3q4 w - - 0 1");
 
     for(int i=0; i<1; i++){
-        chess::Move move = best_move_iterative_deepening(board,5000);
+        chess::Move move = best_move_iterative_deepening(board,1000);
         std::cout << "Meilleur coup : " << uci::moveToUci(move) << std::endl;
 
         board.makeMove(move);
