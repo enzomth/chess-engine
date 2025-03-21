@@ -2879,7 +2879,7 @@ class Board {
         }
     };
 
-   public:
+   protected:
     virtual void placePiece(Piece piece, Square sq) { placePieceInternal(piece, sq); }
 
     virtual void removePiece(Piece piece, Square sq) { removePieceInternal(piece, sq); }
