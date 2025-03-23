@@ -20,6 +20,7 @@ def load_and_resize_piece(image_path):
 
 # Fonction pour charger l'échiquier à partir de la notation FEN
 def load_board_from_fen(fen):
+    fen = fen.split(' ')[0]
     board = [[None for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
     row, col = 0, 0
     for char in fen:
@@ -34,6 +35,13 @@ def load_board_from_fen(fen):
     return board
 
 def main():
+    if len(sys.argv) < 2:
+        print("Erreur: Aucun FEN fourni.")
+        sys.exit(1)
+
+    # Récupérer le FEN depuis les arguments de la ligne de commande
+    fen = sys.argv[1]
+
     pygame.init()
 
     # Créer la fenêtre
@@ -56,9 +64,6 @@ def main():
         'bking': load_and_resize_piece("images/black-king.png")
     }
 
-    # Exemple de FEN : position de départ
-    fen = "8/8/8/1k1r2n1/8/1B6/6R1/4K3"
-
     # Charger l'échiquier à partir de la notation FEN
     board = load_board_from_fen(fen)
     font = pygame.font.SysFont("Arial", 12)
@@ -78,14 +83,17 @@ def main():
                 if piece:
                     piece_image = piece_images[piece]
                     window.blit(piece_image, (col * TILE_SIZE, row * TILE_SIZE))
+        
+        # Dessiner les annotations pour les colonnes (a, b, c, ...)
         for col in range(BOARD_SIZE):
             text = font.render(chr(ord('a') + col), True, (0, 0, 0))  # Colonnes a, b, c, ...
-            window.blit(text, ((col -1) * TILE_SIZE + 50 + TILE_SIZE // 2 - text.get_width() // 2, WINDOW_SIZE -15))
+            window.blit(text, ((col) * TILE_SIZE + TILE_SIZE // 2 - text.get_width() // 2, WINDOW_SIZE -15))
 
         # Dessiner les annotations pour les rangées (1, 2, 3, ...)
         for row in range(BOARD_SIZE):
             text = font.render(str(BOARD_SIZE - row), True, (0, 0, 0))  # Rangées 1, 2, 3, ...
-            window.blit(text, (5, (row-1) * TILE_SIZE + 50 + TILE_SIZE // 2 - text.get_height() // 2))
+            window.blit(text, (5, (row) * TILE_SIZE + TILE_SIZE // 2 - text.get_height() // 2))
+        
         # Gérer les événements
         for event in pygame.event.get():
             if event.type == pygame.QUIT:

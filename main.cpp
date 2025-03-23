@@ -29,7 +29,10 @@ int evaluate(const chess::Board &board) {
     std::pair<chess::GameResultReason, chess::GameResult> result = board.isGameOver();
 
     if (result.first == chess::GameResultReason::CHECKMATE) {
-        return 10000;
+        return 100000;
+    }
+    else if (result.first != chess::GameResultReason::NONE) {
+        return 0;
     }
     else{
         return eval(board);
@@ -260,21 +263,101 @@ chess::Move best_move_iterative_deepening(chess::Board board,int time) {
     return bestMove;
 }
 
+void play(){
+    Board board = Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq – 0 1");
+    std::string input;
+    std::string command = "";
+    int res = 0;
+    std::cout << "Entrez la couleur que vous souhaitez (w ou b) : ";
+      // Pour ignorer le caractère de nouvelle ligne laissé dans le buffer par le précédent cin
+    std::getline(std::cin, input);
+    if (input == "b" || input == "B") {
+        std::cout << "Vous avez choisi noir (black)." << std::endl;
+        std::pair<chess::GameResultReason, chess::GameResult> result = board.isGameOver();
+        while(result.first == chess::GameResultReason::NONE){
+            chess::Move move = best_move_iterative_deepening(board,5000);
+            board.makeMove(move);
+            command = "python3 fen_to_board.py \"" + board.getFen() + "\"";
+            res = std::system(command.c_str());
+
+            if (res != 0) {
+                std::cerr << "Erreur lors de l'exécution du script Python." << std::endl;
+            }
+            result = board.isGameOver();
+            if(result.first == chess::GameResultReason::NONE){
+                break;
+            }
+            //afficher le move 
+            std::cin.ignore();
+            std::cout << "Entrez votre coup en UCI : ";
+            // Pour ignorer le caractère de nouvelle ligne laissé dans le buffer par le précédent cin
+            std::getline(std::cin, input);
+            move = uci::uciToMove(board,input);
+            board.makeMove(move);
+            command = "python3 fen_to_board.py \"" + board.getFen() + "\"";
+            //afficher tableau
+            res = std::system(command.c_str());
+
+            if (res != 0) {
+                std::cerr << "Erreur lors de l'exécution du script Python." << std::endl;
+            }
+            result = board.isGameOver();
+
+        }
+    }
+    else if (input == "w" || input == "W") {
+        std::cout << "Vous avez choisi blanc (white)." << std::endl;
+        std::pair<chess::GameResultReason, chess::GameResult> result = board.isGameOver();
+        while(result.first == chess::GameResultReason::NONE){
+            
+            std::cout << "Entrez votre coup en UCI : ";
+            // Pour ignorer le caractère de nouvelle ligne laissé dans le buffer par le précédent cin
+            std::getline(std::cin, input);
+            chess::Move move = uci::uciToMove(board,input);
+            board.makeMove(move);
+            command = "python3 fen_to_board.py \"" + board.getFen() + "\" &";
+            res= std::system(command.c_str());
+
+            if (res != 0) {
+                std::cerr << "Erreur lors de l'exécution du script Python." << std::endl;
+            }
+            //afficher tableau
+            result = board.isGameOver();
+            if(result.first == chess::GameResultReason::NONE){
+                break;
+            }
+            move = best_move_iterative_deepening(board,5000);
+            board.makeMove(move);
+            command = "python3 fen_to_board.py \"" + board.getFen() + "\" &";
+            res = std::system(command.c_str());
+
+            if (res != 0) {
+                std::cerr << "Erreur lors de l'exécution du script Python." << std::endl;
+            }
+            result = board.isGameOver();
+            //afficher le move 
+
+
+        }
+    }
+    else {
+        std::cout << "Entrée invalide. Veuillez entrer 'b' ou 'w'." << std::endl;
+    }
+}
 
 int main () {
-    //Board board = Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq – 0 1");
-    Board board = Board("8/P1Q1nk1p/5p2/4p3/4P2p/6P1/r4PKP/3q4 w - - 0 1");
-
-    for(int i=0; i<1; i++){
-        chess::Move move = best_move_iterative_deepening(board,5000);
-        std::cout << "Meilleur coup : " << uci::moveToUci(move) << std::endl;
-
-        board.makeMove(move);
+        //Board board = Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq – 0 1");
+        Board board = Board("r5kr/pp1q4/2p1b1p1/3pQ1RP/8/2P5/PPP2PP1/R5K1 w - - 0 1");
+        for(int i=0; i<1; i++){
+            chess::Move move = best_move_iterative_deepening(board,5000);
+            std::cout << "Meilleur coup : " << uci::moveToUci(move) << std::endl;
+    
+            board.makeMove(move);
+        }
+    
+        std::cout << "nb pos : "<< nb_pos << " " << std::endl;
+        std::cout << "FEN  : " << board.getFen() << std::endl;
+    
+    
+        return 0;
     }
-
-    std::cout << "nb pos : "<< nb_pos << std::endl;
-    std::cout << "FEN  : " << board.getFen() << std::endl;
-
-
-    return 0;
-}

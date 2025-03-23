@@ -6,11 +6,14 @@ CXXFLAGS = -Wall -Wextra -std=c++17 -Iinclude -Isrc
 SRC = main.cpp
 EXEC = chess_ai
 
+# Dépendances (ajout du header)
+DEPS = piece_square.hpp
+
 # Compilation
 all: $(EXEC)
 
-$(EXEC): $(SRC)
-	$(CXX) $(CXXFLAGS) $^ -o $@
+$(EXEC): $(SRC) $(DEPS)
+	$(CXX) $(CXXFLAGS) $(SRC) -o $(EXEC)
 
 # Nettoyage
 clean:
