@@ -1,4 +1,0 @@
-evaluation table 
-evaluer que sur une feuille
-table de hashage (pour ne pas recalculer)
-reordonner les coups
