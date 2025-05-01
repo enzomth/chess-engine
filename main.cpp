@@ -1,3 +1,4 @@
+.
 #include <utility>
 #include <chrono>
 
@@ -315,7 +316,7 @@ void play(){
         while(result.first == chess::GameResultReason::NONE){
             chess::Move move = best_move_iterative_deepening(board,5000);
             board.makeMove(move);
-            command = "python3 fen_to_board.py \"" + board.getFen() + "\"";
+            command = "python3 fen_to_board.cpp \"" + board.getFen() + "\"";
             res = std::system(command.c_str());
 
             if (res != 0) {
@@ -332,7 +333,7 @@ void play(){
             std::getline(std::cin, input);
             move = uci::uciToMove(board,input);
             board.makeMove(move);
-            command = "python3 fen_to_board.py \"" + board.getFen() + "\"";
+            command = "python3 fen_to_board.cpp \"" + board.getFen() + "\"";
             //afficher tableau
             res = std::system(command.c_str());
 
@@ -353,7 +354,7 @@ void play(){
             std::getline(std::cin, input);
             chess::Move move = uci::uciToMove(board,input);
             board.makeMove(move);
-            command = "python3 fen_to_board.py \"" + board.getFen() + "\" &";
+            command = "python3 fen_to_board.cpp \"" + board.getFen() + "\" &";
             res= std::system(command.c_str());
 
             if (res != 0) {
@@ -366,7 +367,7 @@ void play(){
             }
             move = best_move_iterative_deepening(board,5000);
             board.makeMove(move);
-            command = "python3 fen_to_board.py \"" + board.getFen() + "\" &";
+            command = "python3 fen_to_board.cpp \"" + board.getFen() + "\" &";
             res = std::system(command.c_str());
 
             if (res != 0) {
