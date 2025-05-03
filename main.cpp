@@ -28,7 +28,7 @@ struct ValueMap {
     std::string uci_move;
 };
 
-std::unordered_map<int, ValueMap> hashTable;
+std::unordered_map<unsigned long, ValueMap> hashTable;
 
 int evaluate(const chess::Board &board) {
 
@@ -49,8 +49,8 @@ int evaluate(const chess::Board &board) {
 }
 
 chess::Movelist sortMove(chess::Movelist& movelist,chess::Move bestMove,chess::Move killerMove1,chess::Move killerMove2) {
-    chess::Movelist tmp;
-    chess::Movelist movesSorted;
+    chess::Movelist tmp;// Liste temporaire pour stocker les autres coups.
+    chess::Movelist movesSorted; // Liste finale triée à retourner.
 
     chess::Move b = NULL;
     chess::Move k1 = NULL;
@@ -59,46 +59,58 @@ chess::Movelist sortMove(chess::Movelist& movelist,chess::Move bestMove,chess::M
     for (const auto &move : movelist) {
         if (move == bestMove){b=move;}
         else if (move == killerMove1){k1=move;}
-        else if (move == killerMove2){k2=move;}
+        else if (move == killerMove2){k2=move;}//On récupère les killer et le best
         else {
-            tmp.add(move);
+            tmp.add(move); // Ce n’est ni un  bestMove, ni un killer → on le garde pour plus tard.
         }
     }
 
     if (b != NULL){movesSorted.add(b);}
-    else if (k2 != NULL){movesSorted.add(k2);}
-    else if (k1 != NULL){movesSorted.add(k1);}
+    if (k1 != NULL){movesSorted.add(k1);}
+    if (k2 != NULL){movesSorted.add(k2);}//on les ajoutes en premiers
 
 
     for (const auto &move : tmp) {
-        movesSorted.add(move);
+        movesSorted.add(move);//on ajoute le reste
     }
 
     return movesSorted;
 }
 
 int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int alpha, int beta,chess::Move killers1[],chess::Move killers2[],Color color) {
+    /*board: position actuelle de l’échiquier
+
+depth: profondeur restante à explorer
+
+isMaximizingPlayer: booléen indiquant si le joueur courant maximise (true) ou minimise (false)
+
+alpha, beta: bornes pour l’élagage alpha-bêta
+
+killers1, killers2: tableaux contenant les coups killers pour chaque profondeur
+
+color: couleur du joueur IA (le joueur qu'on cherche à évaluer de manière cohérente, ex: IA joue blanc, donc on veut un score positif si les blancs sont mieux)*/
 
     //Vérification dans la table de hashage
-    int hashBoard = board.hash();
-    auto calculated_board = hashTable.find(hashBoard);
+    unsigned long hashBoard = board.hash();
+    auto calculated_board = hashTable.find(hashBoard);//on cherche dna sla table et sinon ça renvoie end
     ValueMap value_stored;
 
-    int killerDepth = board.plies_;
+    int killerDepth = board.plies_;//nombre de coups joués depuis le début
 
-    if (calculated_board != hashTable.end()) {
-        value_stored = calculated_board->second;
-        if (value_stored.depth > depth) {
+    if (calculated_board != hashTable.end()){//si pas trouvé
+        value_stored = calculated_board->second;//on extrait value stored qui contient exact,depth et value
+        if (value_stored.depth > depth) {//on update si la depth est plus profonde
+            //exact peut etre 0 = val exacte, ou -1 borne inférieure ou 1 borne superieure
             if (value_stored.exact == 0) {
                 return value_stored.value;
             }
-            if (value_stored.exact == -1 && value_stored.value >= beta) {
+            if (value_stored.exact == -1 && value_stored.value >= beta) {//coupe beta
                 return value_stored.value;
             }
-            if (value_stored.exact == 1 && value_stored.value <= alpha) {
+            if (value_stored.exact == 1 && value_stored.value <= alpha) {//coupe alpha
                 return value_stored.value;
             }
-            if (value_stored.exact == 1) {
+            if (value_stored.exact == 1) {//on continue en updatant
                 beta = std::min(value_stored.value, beta);
             }
             else if (value_stored.exact == -1) {
@@ -111,8 +123,7 @@ int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int a
 
     if (depth <= 0) {
 
-        //Peut etre essayer de store quand on arrive ici la première fois
-        return  color == Color::WHITE? evaluate(board): -evaluate(board);//on s'arrete ici
+        return  color == Color::WHITE? evaluate(board): -evaluate(board);//on s'arrete ici qunad on a atteint la depth max
     }
 
     //Initialisation des valeurs a stocker
@@ -123,24 +134,24 @@ int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int a
 
     Movelist moves;
     movegen::legalmoves(moves, board);
-    if (moves.empty()) {
-        return  color == Color::WHITE? evaluate(board): -evaluate(board);
+    if (moves.empty()) {//si plus de coup disponibles on évalue
+        return evaluate(board);
     }
 
-    if (calculated_board != hashTable.end()) {
+    if (calculated_board != hashTable.end()) {//si on le connait on met en premier les meilleurs et les 2 killers
         moves = sortMove(moves,uci::uciToMove(board,value_stored.uci_move) ,killers1[killerDepth],killers2[killerDepth]);
     }
 
 
 
-    if (isMaximizingPlayer) {
+    if (isMaximizingPlayer) {// si c'est un joueur maximisant
 
-        type_exact = 1;
+        type_exact = 1;//bornes sup (on est par défaut pessimiste
 
         int maxEval = std::numeric_limits<int>::min();
 
         int i =0;
-        for (const auto &move : moves) {
+        for (const auto &move : moves) {//pour chaque move possible
             i++;
             chess::Board newBoard = board;
             newBoard.makeMove(move);  // Joue le coup
@@ -148,7 +159,7 @@ int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int a
             int eval;
             if (i >= nb_coup_max_depth) {
                 eval = minmaxAlphaBeta(newBoard, depth - late_reduction, false, alpha, beta,killers1,killers2,color);
-                value_to_store.depth = depth/2c;
+                value_to_store.depth = depth/2;
                 if (beta <= eval) {
                     eval = minmaxAlphaBeta(newBoard, depth - 1, false, alpha, beta,killers1,killers2,color);
                     value_to_store.depth = depth;
@@ -159,7 +170,7 @@ int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int a
             }
 
             //max
-            if (eval > maxEval) {
+            if (eval > maxEval) {//mise à jour du max
                 maxEval = eval;
                 uci_to_store = uci::moveToUci(move);
             }
@@ -180,8 +191,6 @@ int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int a
                 alpha = maxEval;
             }
 
-            killers1[killerDepth] = killers2[killerDepth];
-            killers2[killerDepth] = move;
 
             if (current_depth == depth) {
                 std::cout << uci::moveToUci(move) << " : " << eval << std::endl;
@@ -211,20 +220,20 @@ int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int a
             newBoard.makeMove(move);  // Joue le coup
 
             int eval;
-            if (i >= nb_coup_max_depth) {
+            if (i >= nb_coup_max_depth) {//late move reduction si le i est plus grand que les premiers coups qu'on juge
                 eval = minmaxAlphaBeta(newBoard, depth - late_reduction, true, alpha, beta,killers1,killers2,color);
                 value_to_store.depth = depth/2;
-                if (eval <= alpha) {
+                if (eval <= alpha) {//si le coup est mieux que prévu on l'évalue complètement
                     eval = minmaxAlphaBeta(newBoard, depth - 1, true, alpha, beta,killers1,killers2,color);
                     value_to_store.depth = depth;
                 }
             }
-            else {
+            else {//si le i est faible on late move reduct pas
                 eval = minmaxAlphaBeta(newBoard, depth - 1, true, alpha, beta,killers1,killers2,color);
             }
 
             //min
-            if (eval < minEval) {
+            if (eval < minEval) {//update du min si coup bien
                 minEval = eval;
                 uci_to_store = uci::moveToUci(move);
             }
@@ -233,8 +242,8 @@ int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int a
             if (minEval <= alpha) {
                 type_exact = 1;
 
-                killers1[killerDepth] = killers2[killerDepth];
-                killers2[killerDepth] = move;
+                    killers1[killerDepth] = killers2[killerDepth];
+                    killers2[killerDepth] = move;
 
                 break;
             }
@@ -243,8 +252,7 @@ int minmaxAlphaBeta(chess::Board board, int depth, bool isMaximizingPlayer,int a
                 beta = minEval;
             }
 
-            killers1[killerDepth] = killers2[killerDepth];
-            killers2[killerDepth] = move;
+
 
             if (current_depth == depth) {
                 std::cout << uci::moveToUci(move) << " : " << eval << std::endl;
@@ -407,7 +415,8 @@ void play(){
 
 int main () {
     //Board board = Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq – 0 1");
-    Board board = Board("r1b1kb1r/pppp1ppp/2n1pq1n/8/3PP3/2N4N/PPP2PPP/R1BQKB1R w KQkq - 1 5");
+    Board board = Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq – 0 1");
+
     //2b2b1r/ppN1kppp/5q2/2p5/3n4/1PPQ2P1/PK2P2P/R7 w - - 0 1
     //1rbqr3/p4pkp/2p2nP1/2p1p3/2P1P3/3P3P/P5PN/RN1Q1RK1 b - - 0 1
     //1rb5/8/p5p1/1p1N1kNp/5P1P/4KP2/Pbn3P1/6R1 w - - 0 1
@@ -464,6 +473,7 @@ int main () {
 
     std::cout << "nb pos : "<< nb_pos << " " << test << std::endl;
     std::cout << "FEN  : " << board.getFen() << std::endl;
+
 
     return 0;
 }

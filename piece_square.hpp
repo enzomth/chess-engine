@@ -72,7 +72,7 @@ inline int PBonus[RANK_NB][FILE_NB][2] =
    { { -7,  0}, {  7,-11}, { -3, 12}, {-13, 21}, {  5, 25}, {-16, 19}, { 10,  4}, { -8,  7} }
   };
 
-int eval(chess::Board board){
+int eval(chess::Board board) {
     int row, col;
     int partie = 0;
     int phase = 0;
@@ -82,78 +82,47 @@ int eval(chess::Board board){
     chess::Color white = chess::Color::WHITE;
     chess::Color black = chess::Color::BLACK;
 
-    // Ajouter la valeur des pièces du joueur actif
-    for (auto pieceType : {chess::PieceType::underlying::PAWN, chess::PieceType::underlying::KNIGHT, chess::PieceType::underlying::BISHOP,
-      chess::PieceType::underlying::ROOK, chess::PieceType::underlying::QUEEN, chess::PieceType::underlying::KING}) {
-
+    for (auto pieceType : {chess::PieceType::PAWN, chess::PieceType::KNIGHT, chess::PieceType::BISHOP,
+                           chess::PieceType::ROOK, chess::PieceType::QUEEN, chess::PieceType::KING}) {
+        int ptIndex = static_cast<int>(pieceType);
 
         chess::Bitboard whitePieces = board.pieces(pieceType, white);
         chess::Bitboard blackPieces = board.pieces(pieceType, black);
+        u_int64_t  white_uint64= whitePieces.getBits();
+        u_int64_t  black_uint64= blackPieces.getBits();
+        // === Blancs ===
+        while (white_uint64 != 0) {
+            int sq = __builtin_ctzll(white_uint64);
+            white_uint64 &= white_uint64 - 1;
 
-        int pieceTypeIndex = static_cast<int>(pieceType);
-        if(pieceType == chess::PieceType::PAWN){
-          for (int i = 0; i < 64; ++i) {
-            if (whitePieces & (1ULL << i)) {
-                row = i / PST_SIZE;  // L'index de la ligne
-                col = i % PST_SIZE;  // L'index de la colonne
-                middlegame_score += PBonus[row][col][0];  // Ajouter la valeur d'ouverture
-                endgame_score += PBonus[row][col][1];
-            }
-        }
-        for (int i = 0; i < 64; ++i) {
-          if (blackPieces & (1ULL << i)) {
-              row = 7 - (i / PST_SIZE);  // L'index de la ligne pour les pièces noires (symétrie)
-              col = i % PST_SIZE;
-              middlegame_score -= PBonus[row][col][0];  // Ajouter la valeur d'ouverture
-              endgame_score -= PBonus[row][col][1];
-          }
-      }
-      }
-        else{
+            row = sq / PST_SIZE;
+            col = sq % PST_SIZE;
+            if (pieceType != chess::PieceType::PAWN && col >= 4) col = 7 - col;
 
-        
-        // Pour les pièces blanches
-        for (int i = 0; i < 64; ++i) {
-            if (whitePieces & (1ULL << i)) {
-                row = i / PST_SIZE;  // L'index de la ligne
-                col = i % PST_SIZE;  // L'index de la colonne
-                if (col >= 4) {
-                    col = 7 - col;
-                }
-                middlegame_score += Bonus[pieceTypeIndex][row][col][0];  // Ajouter la valeur d'ouverture
-                endgame_score += Bonus[pieceTypeIndex][row][col][1];
-            }
+            middlegame_score += (pieceType == chess::PieceType::PAWN ? PBonus[row][col][0] : Bonus[ptIndex][row][col][0]);
+            endgame_score    += (pieceType == chess::PieceType::PAWN ? PBonus[row][col][1] : Bonus[ptIndex][row][col][1]);
+
+            phase += piece_values[ptIndex];
+            partie += piece_values[ptIndex];
         }
 
-        // Pour les pièces noires
-        for (int i = 0; i < 64; ++i) {
-            if (blackPieces & (1ULL << i)) {
-                row = 7 - (i / PST_SIZE);  // L'index de la ligne pour les pièces noires (symétrie)
-                col = i % PST_SIZE;
-                if (col >= 4) {
-                    col = 7 - col;
-                }
-                middlegame_score -= Bonus[pieceTypeIndex][row][col][0];  // Ajouter la valeur d'ouverture
-                endgame_score -= Bonus[pieceTypeIndex][row][col][1];
-            }
+        // === Noirs ===
+        while (black_uint64 != 0) {
+            int sq = __builtin_ctzll(black_uint64);
+            black_uint64 &= black_uint64 - 1;
+
+            row = 7 - (sq / PST_SIZE);
+            col = sq % PST_SIZE;
+            if (pieceType != chess::PieceType::PAWN && col >= 4) col = 7 - col;
+
+            middlegame_score -= (pieceType == chess::PieceType::PAWN ? PBonus[row][col][0] : Bonus[ptIndex][row][col][0]);
+            endgame_score    -= (pieceType == chess::PieceType::PAWN ? PBonus[row][col][1] : Bonus[ptIndex][row][col][1]);
+
+            phase += piece_values[ptIndex];
+            partie -= piece_values[ptIndex];
         }
-      }
-    
-
-        // Ajouter la valeur de la pièce elle-même (dépend de la phase du jeu)
-        phase += whitePieces.count() * piece_values[pieceTypeIndex]
-                 + blackPieces.count() * piece_values[pieceTypeIndex];
-
-
-        
-
-        partie += whitePieces.count() * piece_values[pieceTypeIndex]
-                 - blackPieces.count() * piece_values[pieceTypeIndex];
     }
 
-    // Calcul de l'évaluation en fonction de la phase du jeu (calculer les scores d'ouverture et de fin de partie)
-
-    int eval = partie+ (int)((phase * middlegame_score + (MAX_PHASE - phase) * endgame_score) / MAX_PHASE);
-
+    int eval = partie + (int)((phase * middlegame_score + (MAX_PHASE - phase) * endgame_score) / MAX_PHASE);
     return eval;
 }
